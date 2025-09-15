@@ -19,7 +19,7 @@
     .allocation-bar{ transition: width .5s ease-in-out; }
     .pulse{ animation:pulse 2s infinite; } @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
 
-    /* === Modal: ใช้คลาส .open เพื่อโชว์ (แก้เคสคลิกไม่ได้) === */
+    /* Modal: ใช้คลาส .open เพื่อโชว์ */
     .modal{
       display:none; position:fixed; inset:0; background:rgba(0,0,0,.5);
       z-index:9999; align-items:center; justify-content:center;
@@ -332,7 +332,7 @@
     </section>
   </main>
 
-  <!-- Modals (ใช้ .open แทน .hidden) -->
+  <!-- Modals -->
   <div id="incomeModal" class="modal">
     <div class="bg-white rounded-xl p-6 w-full max-w-md mx-4">
       <div class="flex justify-between items-center mb-4">
@@ -380,10 +380,16 @@
 
   <!-- CONFIG -->
   <script>
-    // ลิงก์ Apps Script ของคุณ
+    // ใช้ URL /exec เปล่าๆ (ห้ามใส่ ?year&month ติดมา)
     const CONFIG = {
-      WEBAPP_URL: 'https://script.google.com/macros/s/AKfycbx7xLBsdHc_WxYCTvOl-3AoKjnDfFpudZDctaUUww5KzKNQpitXZ9GedXr-vHjY2Mg_/exec'
+      WEBAPP_URL: 'https://script.google.com/macros/s/AKfycbw7sr7AODyQtH4RBtY7M4Hzp4hmGViihGeXgcIpAaz_OOjW9PlM1NkftoClL8lFuA49/exec'
     };
+    // สร้าง URL พร้อม query ให้ถูกต้องเสมอ (กันซ้ำ ?)
+    function buildUrl(base, params){
+      const u = new URL(base);
+      Object.entries(params).forEach(([k,v]) => u.searchParams.set(k, v));
+      return u.toString();
+    }
   </script>
 
   <!-- APP JS -->
@@ -399,7 +405,7 @@
     let priceHistory=[], autoUpdateInterval=null;
     let btcATH=108000, btcCurrentPrice=102500;
     let currentYear, currentMonth;
-    let netInvestment = 0; // อัปเดตจากสรุป
+    let netInvestment = 0;
 
     const $ = id => document.getElementById(id);
 
@@ -414,7 +420,8 @@
      *******************/
     async function loadFromWebApp(yearTH, monthIndex){
       const y = THtoAD(yearTH);
-      const res = await fetch(`${CONFIG.WEBAPP_URL}?year=${y}&month=${monthIndex}`);
+      const url = buildUrl(CONFIG.WEBAPP_URL, { year: y, month: monthIndex });
+      const res = await fetch(url);
       if(!res.ok) throw new Error('โหลดข้อมูลไม่สำเร็จ');
       const j = await res.json();
       if(!j.ok) throw new Error(j.error||'WebApp error');
@@ -424,11 +431,11 @@
     async function postTransaction(tx){
       const res = await fetch(CONFIG.WEBAPP_URL, {
         method:'POST',
-        headers:{ 'Content-Type':'text/plain; charset=utf-8' }, // ถูกกับ Apps Script
+        headers:{ 'Content-Type':'text/plain; charset=utf-8' },
         body: JSON.stringify(tx)
       });
       const text = await res.text();
-      let j; try{ j=JSON.parse(text);}catch(e){ throw new Error('WebApp ไม่ได้ตอบเป็น JSON (เช็ค deployment เป็น Anyone)');}
+      let j; try{ j=JSON.parse(text);}catch(e){ throw new Error('WebApp ไม่ได้ตอบเป็น JSON (ตรวจ deployment/สิทธิ์)');}
       if(!res.ok || !j.ok) throw new Error(j?.error || ('HTTP '+res.status));
       return true;
     }
@@ -485,13 +492,12 @@
       $('debtProgress').style.width = (m.debtBudget? Math.min(100, m.debt/m.debtBudget*100):0) + '%';
       $('investmentProgress').style.width = (m.investBase? Math.min(150, m.investTotal/m.investBase*100):0) + '%';
 
-      // donut
       donutChart.data.labels=['กิน','หนี้','ลงทุนสุทธิ','เงินสำรอง'];
       donutChart.data.datasets[0].data=[m.food, m.debt, m.netInvest, m.emergency];
       donutChart.update();
 
       netInvestment = m.netInvest;
-      updateBTCAllocation(); // sync ส่วน crypto
+      updateBTCAllocation();
       $('lastUpdate').textContent = `อัพเดทล่าสุด: ${new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})}`;
     }
 
@@ -539,7 +545,6 @@
       const now = new Date();
       priceHistory.push({ time: now.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}), price:Math.round(price) });
       if(priceHistory.length>30) priceHistory.shift();
-      // update chart
       btcPriceChart.data.labels = priceHistory.map(x=>x.time);
       btcPriceChart.data.datasets[0].data = priceHistory.map(x=>x.price);
       btcPriceChart.data.datasets[1].data = priceHistory.map(()=>btcATH);
@@ -557,7 +562,6 @@
         addToPriceHistory(btcCurrentPrice);
         updateBTCAllocation();
       }catch(e){
-        // ใช้ค่า default ถ้าดึงไม่ได้
         updateBTCAllocation();
       }
     }
@@ -615,17 +619,14 @@
      * DOMContent  *
      ***************/
     document.addEventListener('DOMContentLoaded', ()=>{
-      // วันเริ่มต้น
       const today = new Date().toISOString().split('T')[0];
       $('incomeDate').value = today; $('expenseDate').value = today;
 
-      // เดือนปัจจุบัน (พ.ศ.)
       const now = new Date(); currentYear = now.getFullYear()+543; currentMonth = now.getMonth();
       $('currentMonth').textContent = `${TH_MONTHS[currentMonth]} ${currentYear}`;
 
-      // Charts
       initDonut(); initPriceChart();
-      // Seed history 10 จุด
+
       for(let i=9;i>=0;i--){ const t=new Date(now.getTime()-i*60000); const p=btcCurrentPrice+(Math.random()-.5)*800;
         priceHistory.push({ time:t.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}), price:Math.round(Math.max(p,30000)) });
       }
@@ -634,13 +635,9 @@
       btcPriceChart.data.datasets[1].data = priceHistory.map(()=>btcATH);
       btcPriceChart.update();
 
-      // ดึงราคา/ATH จริง
       fetchBTCMeta();
-
-      // โหลดข้อมูลชีต
       refreshDashboard();
 
-      // ===== bind buttons (ใช้ event listener แทน inline เพื่อเสถียร) =====
       $('btnAddIncome').addEventListener('click', ()=>{ openModal('incomeModal'); setTimeout(()=>$('incomeDescription').focus(),50); });
       $('btnAddExpense').addEventListener('click', ()=>{ openModal('expenseModal'); setTimeout(()=>$('expenseDescription').focus(),50); });
       $('btnReport').addEventListener('click', ()=>alert('Reports: Coming soon'));
@@ -650,20 +647,18 @@
       $('closeExpense').addEventListener('click', ()=>closeModal('expenseModal'));
       $('cancelExpense').addEventListener('click', ()=>closeModal('expenseModal'));
 
-      // Save income
       $('saveIncome').addEventListener('click', async ()=>{
         const description = $('incomeDescription').value.trim();
         const amount = parseFloat($('incomeAmount').value);
         const date = $('incomeDate').value;
         if(!description || !amount || !date){ alert('กรอกข้อมูลให้ครบ'); return; }
         try{
-          await postTransaction({ date, description, type:'รายรับ', amount: amount });
+          await postTransaction({ date, description, type:'รายรับ', amount });
           closeModal('incomeModal'); $('incomeForm').reset(); $('incomeDate').value=today;
           refreshDashboard();
         }catch(e){ alert('บันทึกไม่สำเร็จ: '+e.message); }
       });
 
-      // Save expense
       $('saveExpense').addEventListener('click', async ()=>{
         const description = $('expenseDescription').value.trim();
         const type = $('expenseType').value;
@@ -677,7 +672,6 @@
         }catch(e){ alert('บันทึกไม่สำเร็จ: '+e.message); }
       });
 
-      // BTC controls
       $('btnPriceUpdate').addEventListener('click', ()=>{
         const v = parseFloat($('btcPriceInput').value);
         if(!v||v<=0) return; btcCurrentPrice=v; addToPriceHistory(v); updateBTCAllocation(); $('btcPriceInput').value='';
