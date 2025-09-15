@@ -1,0 +1,466 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard บริหารเงิน</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Sarabun', sans-serif; }
+    .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .crypto-card { transition: all .3s ease; }
+    .crypto-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,.1);}
+    .pulse { animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+    .allocation-bar { transition: width .5s ease-in-out; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <!-- Header -->
+  <div class="gradient-bg text-white p-6 shadow-lg">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex justify-between items-center mb-2">
+        <h1 class="text-3xl font-bold">💰 Dashboard บริหารเงิน</h1>
+        <div class="flex items-center space-x-4">
+          <div class="bg-white bg-opacity-20 rounded-lg px-4 py-2">
+            <div class="flex items-center space-x-2">
+              <span class="text-lg font-semibold" id="currentMonth">—</span>
+              <span class="text-sm">📅</span>
+            </div>
+          </div>
+          <div class="bg-white bg-opacity-20 rounded-lg px-3 py-2">
+            <span class="text-sm" id="lastUpdate">อัพเดทล่าสุด: —</span>
+          </div>
+        </div>
+      </div>
+      <p class="text-blue-100">กฎ 3 ส่วน: รายรับ ÷ 3 = กิน/หนี้/ลงทุน | เหลือจาก กิน/หนี้ → ทบลงทุน | ลงทุนกัน 10% เป็นเงินสำรองฉุกเฉิน | Crypto: BTC ตาม % ย่อ, ที่เหลือ All-in KUB</p>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto p-6 space-y-8">
+    <!-- Summary -->
+    <div class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4">
+      <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-purple-500"><div class="flex justify-between"><div><p class="text-gray-600 text-sm">รายรับ</p><p class="text-2xl font-bold" id="totalIncome">฿0</p></div><div class="bg-purple-100 p-3 rounded-full">💵</div></div></div>
+      <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-orange-500"><div class="flex justify-between"><div><p class="text-gray-600 text-sm">กิน</p><p class="text-2xl font-bold text-orange-600" id="foodExpense">฿0</p><p class="text-xs text-gray-500">งบ <span id="foodBudget">฿0</span></p><div class="w-full bg-gray-200 h-1.5 mt-1 rounded-full"><div class="bg-orange-500 h-1.5 rounded-full" id="foodProgress" style="width:0%"></div></div></div><div class="bg-orange-100 p-3 rounded-full">🍽️</div></div></div>
+      <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-red-500"><div class="flex justify-between"><div><p class="text-gray-600 text-sm">หนี้</p><p class="text-2xl font-bold text-red-600" id="debtExpense">฿0</p><p class="text-xs text-gray-500">งบ <span id="debtBudget">฿0</span></p><div class="w-full bg-gray-200 h-1.5 mt-1 rounded-full"><div class="bg-red-500 h-1.5 rounded-full" id="debtProgress" style="width:0%"></div></div></div><div class="bg-red-100 p-3 rounded-full">💳</div></div></div>
+      <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500"><div class="flex justify-between"><div><p class="text-gray-600 text-sm">ลงทุนรวม</p><p class="text-2xl font-bold text-green-600" id="totalInvestment">฿0</p><p class="text-xs text-gray-500">งบ <span id="investmentBudget">฿0</span></p><div class="w-full bg-gray-200 h-1.5 mt-1 rounded-full"><div class="bg-green-500 h-1.5 rounded-full" id="investmentProgress" style="width:0%"></div></div></div><div class="bg-green-100 p-3 rounded-full">📈</div></div></div>
+      <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-orange-300"><div class="flex justify-between"><div><p class="text-gray-600 text-sm">เหลือจากกิน</p><p class="text-2xl font-bold text-orange-500" id="foodRemaining">฿0</p></div><div class="bg-orange-50 p-3 rounded-full">💰</div></div></div>
+      <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-red-300"><div class="flex justify-between"><div><p class="text-gray-600 text-sm">เหลือจากหนี้</p><p class="text-2xl font-bold text-red-500" id="debtRemaining">฿0</p></div><div class="bg-red-50 p-3 rounded-full">💸</div></div></div>
+      <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-500"><div class="flex justify-between"><div><p class="text-gray-600 text-sm">เงินสำรองฉุกเฉิน</p><p class="text-2xl font-bold text-blue-600" id="emergencyFund">฿0</p><p class="text-xs text-blue-500">10% ของลงทุน</p></div><div class="bg-blue-100 p-3 rounded-full">🛡️</div></div></div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div class="bg-white rounded-xl shadow-md p-6">
+        <h3 class="text-xl font-bold mb-4">📊 การแบ่งเงิน</h3>
+        <div class="relative h-80"><canvas id="donutChart"></canvas></div>
+      </div>
+      <div class="bg-white rounded-xl shadow-md p-6">
+        <h3 class="text-xl font-bold mb-4">🔄 แผนผังไหลของเงิน</h3>
+        <div class="space-y-4">
+          <div class="text-center"><div class="bg-purple-100 rounded-lg p-4 inline-block"><span class="text-lg font-bold text-purple-700" id="incomeBadge">รายรับ —</span></div></div>
+          <div class="text-center text-xs text-gray-500">แบ่ง 3 ส่วนเท่าๆ กัน</div>
+          <div class="grid grid-cols-3 gap-2">
+            <div class="bg-orange-100 rounded-lg p-3 text-center"><div class="text-sm font-medium text-orange-700">กิน</div><div class="text-lg font-bold text-orange-600" id="flowFood">—</div><div class="text-xs text-orange-500" id="flowFoodRemain">เหลือ —</div></div>
+            <div class="bg-red-100 rounded-lg p-3 text-center"><div class="text-sm font-medium text-red-700">หนี้</div><div class="text-lg font-bold text-red-600" id="flowDebt">—</div><div class="text-xs text-red-500" id="flowDebtRemain">เหลือ —</div></div>
+            <div class="bg-green-100 rounded-lg p-3 text-center"><div class="text-sm font-medium text-green-700">ลงทุนฐาน</div><div class="text-lg font-bold text-green-600" id="flowInvestBase">—</div></div>
+          </div>
+          <div class="text-center"><div class="bg-green-200 rounded-lg p-3 inline-block"><div class="text-sm text-green-700" id="flowSumText">—</div><div class="text-lg font-bold text-green-600" id="flowInvestTotal">= ลงทุนรวม —</div></div></div>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="bg-blue-100 rounded-lg p-3 text-center"><div class="text-sm font-medium text-blue-700">สำรองฉุกเฉิน</div><div class="text-lg font-bold text-blue-600" id="flowEmergency">—</div></div>
+            <div class="bg-green-200 rounded-lg p-3 text-center"><div class="text-sm font-medium text-green-700">ลงทุนสุทธิ</div><div class="text-lg font-bold text-green-600" id="flowNetInvest">—</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BTC -->
+    <div class="bg-white rounded-xl shadow-md p-6">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold">₿ BTC/USD Real-Time Price Tracking</h3>
+        <div class="flex items-center space-x-2"><div class="w-3 h-3 bg-green-500 rounded-full pulse"></div><span class="text-sm text-gray-600">Live Data</span></div>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <div class="bg-gradient-to-br from-orange-400 to-orange-600 p-4 rounded-lg text-white text-center">
+          <div class="text-xs opacity-80">All-Time High</div>
+          <div class="text-xl font-bold" id="btcATH">$—</div>
+          <div class="text-xs opacity-80" id="btcAthDate">—</div>
+        </div>
+        <div class="bg-gradient-to-br from-blue-500 to-blue-700 p-4 rounded-lg text-white text-center">
+          <div class="text-xs opacity-80">Current Price</div>
+          <div class="text-xl font-bold" id="btcCurrent">$—</div>
+          <div class="text-xs opacity-80" id="priceChange">—</div>
+        </div>
+        <div class="bg-gradient-to-br from-red-500 to-red-700 p-4 rounded-lg text-white text-center">
+          <div class="text-xs opacity-80">% From ATH</div>
+          <div class="text-xl font-bold" id="btcDropFromATH">—</div>
+          <div class="text-xs opacity-80">Drop Amount</div>
+        </div>
+        <div class="bg-gradient-to-br from-green-500 to-green-700 p-4 rounded-lg text-white text-center">
+          <div class="text-xs opacity-80">BTC Allocation</div>
+          <div class="text-xl font-bold" id="btcAllocation">—</div>
+          <div class="text-xs opacity-80">Auto-Adjusted</div>
+        </div>
+        <div class="bg-gradient-to-br from-purple-500 to-purple-700 p-4 rounded-lg text-white text-center">
+          <div class="text-xs opacity-80">Market Cap Rank</div>
+          <div class="text-xl font-bold">#1</div>
+          <div class="text-xs opacity-80">Crypto Leader</div>
+        </div>
+      </div>
+
+      <div class="bg-gray-50 p-6 rounded-lg">
+        <h4 class="font-semibold mb-4">💹 Price Control Center</h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium mb-2">Manual BTC Price Update</label>
+              <div class="flex space-x-2">
+                <div class="relative flex-1"><span class="absolute left-3 top-2 text-gray-500">$</span>
+                  <input type="number" id="btcPriceInput" placeholder="ใส่ราคา…" min="1000" max="200000" step="50"
+                         class="w-full pl-8 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                </div>
+                <button onclick="updateBTCPrice()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium">Update</button>
+              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+              <button onclick="quickPriceUpdate(95000)" class="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-2 rounded text-sm font-medium">$95K</button>
+              <button onclick="quickPriceUpdate(100000)" class="bg-yellow-100 hover:bg-yellow-200 text-yellow-700 px-3 py-2 rounded text-sm font-medium">$100K</button>
+              <button onclick="quickPriceUpdate(105000)" class="bg-green-100 hover:bg-green-200 text-green-700 px-3 py-2 rounded text-sm font-medium">$105K</button>
+            </div>
+          </div>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium mb-2">Live Data</label>
+              <div class="space-y-2">
+                <button onclick="fetchRealBTCPrice()" class="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium">🔄 Fetch Live Price</button>
+                <button onclick="startAutoUpdate()" id="autoUpdateBtn" class="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium">⚡ Start Auto-Update (5min)</button>
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2">Price Alerts</label>
+              <div class="flex space-x-2">
+                <input type="number" id="alertPrice" placeholder="Alert at $…" min="1000" max="200000"
+                       class="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                <button onclick="setAlert()" class="bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded-lg text-sm font-medium">Set Alert</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Price chart -->
+      <div class="bg-gray-50 p-4 rounded-lg mt-4">
+        <div class="relative h-40"><canvas id="btcPriceChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Transactions -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div class="lg:col-span-2 bg-white rounded-xl shadow-md p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-bold">📋 ธุรกรรมล่าสุด</h3>
+          <div class="flex space-x-2">
+            <button onclick="filterTransactions('all', this)" class="filter-btn active bg-blue-500 text-white px-3 py-1 rounded text-sm">ทั้งหมด</button>
+            <button onclick="filterTransactions('รายรับ', this)" class="filter-btn bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm">รายรับ</button>
+            <button onclick="filterTransactions('รายจ่าย', this)" class="filter-btn bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm">รายจ่าย</button>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead><tr class="border-b border-gray-200"><th class="text-left py-3 px-4">วันที่</th><th class="text-left py-3 px-4">รายการ</th><th class="text-left py-3 px-4">ประเภท</th><th class="text-right py-3 px-4">จำนวน</th><th class="text-center py-3 px-4">การดำเนินการ</th></tr></thead>
+            <tbody id="transactionTable"></tbody>
+          </table>
+        </div>
+        <div class="flex justify-between items-center mt-4 text-sm text-gray-500"><span id="tableCount"></span></div>
+      </div>
+
+      <div class="space-y-6">
+        <div class="bg-white rounded-xl shadow-md p-6">
+          <h3 class="text-xl font-bold mb-4">⚡ การดำเนินการ</h3>
+          <div class="space-y-3">
+            <button onclick="addIncome()" class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-4 rounded-lg">💰 เพิ่มรายรับ</button>
+            <button onclick="addExpense()" class="w-full bg-red-500 hover-bg-red-600 text-white font-semibold py-3 px-4 rounded-lg">📝 บันทึกรายจ่าย</button>
+            <button onclick="viewReport()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg">📊 ดูรายงาน</button>
+            <button onclick="setGoals()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-semibold py-3 px-4 rounded-lg">🎯 ตั้งเป้าหมาย</button>
+            <button onclick="exportData()" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg">📤 ส่งออกข้อมูล</button>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-md p-6">
+          <h3 class="text-lg font-bold mb-4">🔔 การแจ้งเตือน</h3>
+          <div id="alertPanel" class="space-y-3 text-sm text-gray-700">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modals -->
+  <div id="incomeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+      <div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold">💰 เพิ่มรายรับ</h3><button onclick="hideModal('incomeModal')" class="text-gray-500 hover:text-gray-700">×</button></div>
+      <form id="incomeForm" class="space-y-4">
+        <div><label class="block text-sm mb-2">รายการ</label><input id="incomeDescription" class="w-full px-3 py-2 border rounded-lg" placeholder="เงินเดือน / โบนัส"></div>
+        <div><label class="block text-sm mb-2">จำนวนเงิน (บาท)</label><input type="number" id="incomeAmount" class="w-full px-3 py-2 border rounded-lg" min="0" step="0.01" placeholder="0"></div>
+        <div><label class="block text-sm mb-2">วันที่</label><input type="date" id="incomeDate" class="w-full px-3 py-2 border rounded-lg"></div>
+        <div class="flex space-x-3 pt-2"><button type="button" onclick="hideModal('incomeModal')" class="flex-1 bg-gray-300 py-2 rounded-lg">ยกเลิก</button><button type="button" onclick="submitIncome()" class="flex-1 bg-green-500 text-white py-2 rounded-lg">บันทึก</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="expenseModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+      <div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold">📝 บันทึกรายจ่าย</h3><button onclick="hideModal('expenseModal')" class="text-gray-500 hover:text-gray-700">×</button></div>
+      <form id="expenseForm" class="space-y-4">
+        <div><label class="block text-sm mb-2">รายการ</label><input id="expenseDescription" class="w-full px-3 py-2 border rounded-lg" placeholder="ค่าอาหาร / ผ่อนบ้าน"></div>
+        <div><label class="block text-sm mb-2">ประเภท</label>
+          <select id="expenseType" class="w-full px-3 py-2 border rounded-lg">
+            <option value="">เลือกประเภท</option>
+            <option value="กิน">🍽️ กิน</option>
+            <option value="หนี้">💳 หนี้</option>
+            <option value="ลงทุน">📈 ลงทุน</option>
+            <option value="สำรอง">🛡️ สำรอง</option>
+          </select>
+        </div>
+        <div><label class="block text-sm mb-2">จำนวนเงิน (บาท)</label><input type="number" id="expenseAmount" class="w-full px-3 py-2 border rounded-lg" min="0" step="0.01" placeholder="0"></div>
+        <div><label class="block text-sm mb-2">วันที่</label><input type="date" id="expenseDate" class="w-full px-3 py-2 border rounded-lg"></div>
+        <div class="flex space-x-3 pt-2"><button type="button" onclick="hideModal('expenseModal')" class="flex-1 bg-gray-300 py-2 rounded-lg">ยกเลิก</button><button type="button" onclick="submitExpense()" class="flex-1 bg-red-500 text-white py-2 rounded-lg">บันทึก</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- CONFIG -->
+  <script>
+    const CONFIG = {
+      WEBAPP_URL: 'https://script.google.com/macros/s/AKfycbx7xLBsdHc_WxYCTvOl-3AoKjnDfFpudZDctaUUww5KzKNQpitXZ9GedXr-vHjY2Mg_/exec'
+    };
+  </script>
+
+  <!-- APP JS -->
+  <script>
+    // ===== Globals & utils
+    const TH_MONTHS=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+    const fmtTHB=n=>'฿'+Number(n||0).toLocaleString();
+    let currentYear, currentMonth, donutChart, btcPriceChart;
+    let btcATH=108000, btcCurrentPrice=102500, priceHistory=[], autoUpdateInterval=null, priceAlerts=[];
+    let netInvestment=0;
+    const THtoAD=y=> y>2400? y-543 : y;
+
+    // ===== Fetch helpers
+    async function loadFromWebApp(yearTH, monthIndex){
+      const y=THtoAD(yearTH);
+      const res=await fetch(`${CONFIG.WEBAPP_URL}?year=${y}&month=${monthIndex}`);
+      if(!res.ok) throw new Error('GET failed');
+      const j=await res.json(); if(!j.ok) throw new Error(j.error||'WebApp error');
+      return j.transactions||[];
+    }
+    // use text/plain to avoid preflight
+    async function postTransaction(tx){
+      const res=await fetch(CONFIG.WEBAPP_URL,{
+        method:'POST',
+        headers:{ 'Content-Type':'text/plain; charset=utf-8' },
+        body: JSON.stringify(tx)
+      });
+      const text=await res.text();
+      let json; try{ json=JSON.parse(text);}catch(e){ throw new Error('WebApp did not return JSON (check deployment access = Anyone)');}
+      if(!res.ok || !json.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+      return true;
+    }
+
+    // ===== Rules
+    function computeFromTransactions(txns){
+      let income=0, food=0, debt=0;
+      txns.forEach(tx=>{
+        const amt=Number(tx.amount)||0;
+        if(amt>0) income+=amt;
+        else{
+          if(tx.type==='กิน') food+=-amt;
+          else if(tx.type==='หนี้') debt+=-amt;
+        }
+      });
+      const base=Math.floor(income/3);
+      const foodRemain=Math.max(base-food,0);
+      const debtRemain=Math.max(base-debt,0);
+      const investTotal=base+foodRemain+debtRemain;
+      const emergency=Math.floor(investTotal*0.10);
+      const netInvest=investTotal-emergency;
+      return {income, food, debt, foodBudget:base, debtBudget:base, investBase:base, foodRemain, debtRemain, investTotal, emergency, netInvest};
+    }
+
+    function applySummaryToUI(m){
+      document.getElementById('totalIncome').textContent=fmtTHB(m.income);
+      document.getElementById('foodExpense').textContent=fmtTHB(m.food);
+      document.getElementById('debtExpense').textContent=fmtTHB(m.debt);
+      document.getElementById('foodBudget').textContent=fmtTHB(m.foodBudget);
+      document.getElementById('debtBudget').textContent=fmtTHB(m.debtBudget);
+      document.getElementById('totalInvestment').textContent=fmtTHB(m.investTotal);
+      document.getElementById('investmentBudget').textContent=fmtTHB(m.investBase);
+      document.getElementById('foodRemaining').textContent=fmtTHB(m.foodRemain);
+      document.getElementById('debtRemaining').textContent=fmtTHB(m.debtRemain);
+      document.getElementById('emergencyFund').textContent=fmtTHB(m.emergency);
+      document.getElementById('incomeBadge').textContent=`รายรับ ${fmtTHB(m.income)}`;
+      document.getElementById('flowFood').textContent=fmtTHB(Math.min(m.food,m.foodBudget));
+      document.getElementById('flowDebt').textContent=fmtTHB(Math.min(m.debt,m.debtBudget));
+      document.getElementById('flowInvestBase').textContent=fmtTHB(m.investBase);
+      document.getElementById('flowFoodRemain').textContent=`เหลือ ${fmtTHB(m.foodRemain)}`;
+      document.getElementById('flowDebtRemain').textContent=`เหลือ ${fmtTHB(m.debtRemain)}`;
+      document.getElementById('flowSumText').textContent=`เงินเหลือ ${fmtTHB(m.foodRemain+m.debtRemain)} + ลงทุนฐาน ${fmtTHB(m.investBase)}`;
+      document.getElementById('flowInvestTotal').textContent=`= ลงทุนรวม ${fmtTHB(m.investTotal)}`;
+      document.getElementById('flowEmergency').textContent=fmtTHB(m.emergency);
+      document.getElementById('flowNetInvest').textContent=fmtTHB(m.netInvest);
+
+      // progress bars
+      document.getElementById('foodProgress').style.width = (m.foodBudget? Math.min(100, m.food/m.foodBudget*100) : 0) + '%';
+      document.getElementById('debtProgress').style.width = (m.debtBudget? Math.min(100, m.debt/m.debtBudget*100) : 0) + '%';
+      document.getElementById('investmentProgress').style.width = (m.investBase? Math.min(150, m.investTotal/m.investBase*100) : 0) + '%';
+
+      donutChart.data.labels=['กิน','หนี้','ลงทุนสุทธิ','เงินสำรอง'];
+      donutChart.data.datasets[0].data=[m.food,m.debt,m.netInvest,m.emergency];
+      donutChart.update();
+
+      netInvestment=m.netInvest;
+      updateBTCAllocation();
+      document.getElementById('lastUpdate').textContent=`อัพเดทล่าสุด: ${new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})}`;
+    }
+
+    function renderTransactionsTable(txns){
+      const tbody=document.getElementById('transactionTable'); tbody.innerHTML='';
+      const badge={ 'รายรับ':'bg-purple-100 text-purple-700','กิน':'bg-orange-100 text-orange-700','หนี้':'bg-red-100 text-red-700','ลงทุน':'bg-green-100 text-green-700','สำรอง':'bg-blue-100 text-blue-700'};
+      txns.slice().reverse().forEach(tx=>{
+        const tr=document.createElement('tr'); tr.className='border-b border-gray-100 hover:bg-gray-50 transaction-row';
+        tr.dataset.type = tx.amount>=0 ? 'รายรับ' : 'รายจ่าย';
+        tr.innerHTML=`
+          <td class="py-3 px-4 text-gray-600">${new Date(tx.date).toLocaleDateString('th-TH')}</td>
+          <td class="py-3 px-4 text-gray-800">${tx.description}</td>
+          <td class="py-3 px-4"><span class="${badge[tx.type]||'bg-gray-100 text-gray-700'} px-2 py-1 rounded-full text-xs font-medium">${tx.type}</span></td>
+          <td class="py-3 px-4 text-right font-semibold ${tx.amount>=0?'text-green-600':'text-red-600'}">${tx.amount>=0?'+':''}${fmtTHB(Math.abs(tx.amount))}</td>
+          <td class="py-3 px-4 text-center"><button onclick="editTransaction()" class="text-blue-500 hover:text-blue-700 text-xs">แก้ไข</button></td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById('tableCount').textContent = `ทั้งหมด ${txns.length} รายการ`;
+    }
+
+    // ===== Notifications & modals
+    const showModal=id=>document.getElementById(id).classList.remove('hidden');
+    const hideModal=id=>document.getElementById(id).classList.add('hidden');
+    function showNotification(title,message,type='info'){
+      const el=document.createElement('div'); el.className='fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm transform transition-all duration-300 translate-x-full';
+      const colors={success:'bg-green-500 text-white',error:'bg-red-500 text-white',warning:'bg-yellow-500 text-white',info:'bg-blue-500 text-white'};
+      el.className+=' '+(colors[type]||colors.info);
+      el.innerHTML=`<div class="font-semibold text-sm">${title}</div><div class="text-xs mt-1 whitespace-pre-line">${message}</div>`;
+      document.body.appendChild(el); setTimeout(()=>el.classList.remove('translate-x-full'),100);
+      setTimeout(()=>{el.classList.add('translate-x-full'); setTimeout(()=>el.remove(),300)},4000);
+    }
+
+    // ===== Actions
+    function addIncome(){ showModal('incomeModal'); }
+    function addExpense(){ showModal('expenseModal'); }
+    function editTransaction(){ showNotification('✏️ Edit','Feature coming soon','info'); }
+    function viewReport(){ showNotification('📊 Reports','Coming soon','info'); }
+    function setGoals(){ showNotification('🎯 Goals','Coming soon','info'); }
+
+    async function submitIncome(){
+      const description=document.getElementById('incomeDescription').value.trim();
+      const amount=parseFloat(document.getElementById('incomeAmount').value);
+      const date=document.getElementById('incomeDate').value;
+      if(!description||!amount||!date) return showNotification('❌ Incomplete','กรอกข้อมูลให้ครบ','error');
+      try{ await postTransaction({date, description, type:'รายรับ', amount: amount});
+        hideModal('incomeModal'); document.getElementById('incomeForm').reset();
+        showNotification('💰 Income Added', `${description}: ${fmtTHB(amount)}`,'success');
+        await refreshDashboard();
+      }catch(e){ showNotification('Save failed', String(e),'error'); }
+    }
+    async function submitExpense(){
+      const description=document.getElementById('expenseDescription').value.trim();
+      const type=document.getElementById('expenseType').value;
+      const amount=parseFloat(document.getElementById('expenseAmount').value);
+      const date=document.getElementById('expenseDate').value;
+      if(!description||!type||!amount||!date) return showNotification('❌ Incomplete','กรอกข้อมูลให้ครบ','error');
+      try{ await postTransaction({date, description, type, amount: -Math.abs(amount)});
+        hideModal('expenseModal'); document.getElementById('expenseForm').reset();
+        showNotification('📝 Expense Added', `${description}: ${fmtTHB(amount)}`,'success');
+        await refreshDashboard();
+      }catch(e){ showNotification('Save failed', String(e),'error'); }
+    }
+    function exportData(){ const blob=new Blob([JSON.stringify({ts:new Date().toISOString()},null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='financial_data.json'; a.click(); URL.revokeObjectURL(url); }
+
+    // ===== BTC logic
+    const calculateDropFromATH=(cur,ath)=>( (cur-ath)/ath*100 );
+    function getBTCWeight(drop){ if(drop>=-5) return 40; if(drop>=-10) return 60; if(drop>=-15) return 80; return 100; }
+    function highlightActiveRule(){/* rules UI kept minimal here */}
+
+    function updateBTCAllocation(){
+      const drop=calculateDropFromATH(btcCurrentPrice, btcATH);
+      const w=getBTCWeight(drop);
+      document.getElementById('btcATH').textContent=`$${btcATH.toLocaleString()}`;
+      document.getElementById('btcCurrent').textContent=`$${btcCurrentPrice.toLocaleString()}`;
+      document.getElementById('btcDropFromATH').textContent=`${drop.toFixed(1)}%`;
+      document.getElementById('priceChange').textContent=`${drop>=0?'+':''}$${(btcCurrentPrice-btcATH).toLocaleString()}`;
+      document.getElementById('btcAllocation').textContent=`${w}%`;
+    }
+    function addToPriceHistory(price){ const now=new Date(); priceHistory.push({time:now.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}), price:Math.round(price)}); if(priceHistory.length>20) priceHistory.shift(); updatePriceChart(); }
+    function updateBTCPrice(){ const v=parseFloat(document.getElementById('btcPriceInput').value); if(!v||v<=0) return; btcCurrentPrice=v; addToPriceHistory(v); updateBTCAllocation(); document.getElementById('btcPriceInput').value=''; }
+    function quickPriceUpdate(p){ btcCurrentPrice=p; addToPriceHistory(p); updateBTCAllocation(); }
+    async function fetchRealBTCPrice(){ try{ const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd'); const d=await r.json(); const p=Math.round(d.bitcoin.usd); btcCurrentPrice=p; addToPriceHistory(p); updateBTCAllocation(); }catch(e){ /* ignore */ } }
+    function startAutoUpdate(){ const btn=document.getElementById('autoUpdateBtn'); if(autoUpdateInterval){ clearInterval(autoUpdateInterval); autoUpdateInterval=null; btn.textContent='⚡ Start Auto-Update (5min)'; } else { autoUpdateInterval=setInterval(fetchRealBTCPrice,300000); btn.textContent='⏹️ Stop Auto-Update'; fetchRealBTCPrice(); } }
+    function setAlert(){ const price=parseFloat(document.getElementById('alertPrice').value); if(!price||price<=0) return; priceAlerts.push({price,triggered:false}); document.getElementById('alertPrice').value=''; }
+
+    // ATH + Current (ครั้งแรกที่โหลด)
+    async function fetchBTCMeta(){
+      try{
+        const url = 'https://api.coingecko.com/api/v3/coins/bitcoin?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false';
+        const r = await fetch(url); const d = await r.json();
+        btcATH = Math.round(d.market_data.ath.usd);
+        const athDate = new Date(d.market_data.ath_date.usd);
+        btcCurrentPrice = Math.round(d.market_data.current_price.usd);
+        document.getElementById('btcAthDate').textContent = athDate.toLocaleDateString('en-US',{month:'short',year:'numeric'});
+        addToPriceHistory(btcCurrentPrice);
+        updateBTCAllocation();
+      }catch(err){ updateBTCAllocation(); }
+    }
+
+    // ===== Charts
+    function initDonut(){ donutChart=new Chart(document.getElementById('donutChart').getContext('2d'),{type:'doughnut',data:{labels:[],datasets:[{data:[0,0,0,0],backgroundColor:['#F59E0B','#EF4444','#16A34A','#3B82F6'],borderWidth:0,cutout:'60%'}]},options:{plugins:{legend:{display:false}},maintainAspectRatio:false}}); }
+    function initPriceChart(){ btcPriceChart=new Chart(document.getElementById('btcPriceChart').getContext('2d'),{type:'line',data:{labels:[],datasets:[{label:'BTC',data:[],borderColor:'#F59E0B',backgroundColor:'rgba(245,158,11,0.1)',borderWidth:2,fill:true,tension:.4,pointRadius:2},{label:'ATH',data:[],borderColor:'#EF4444',borderWidth:1,borderDash:[5,5],fill:false,pointRadius:0}]},options:{plugins:{legend:{display:false}},maintainAspectRatio:false,scales:{y:{ticks:{callback:v=>'$'+Number(v).toLocaleString()}}}}); }
+    function updatePriceChart(){ if(!btcPriceChart) return; btcPriceChart.data.labels=priceHistory.map(x=>x.time); btcPriceChart.data.datasets[0].data=priceHistory.map(x=>x.price); btcPriceChart.data.datasets[1].data=priceHistory.map(()=>btcATH); btcPriceChart.update('none'); }
+
+    // ===== Orchestrator
+    async function refreshDashboard(){
+      try{
+        const txns=await loadFromWebApp(currentYear,currentMonth);
+        renderTransactionsTable(txns);
+        applySummaryToUI(computeFromTransactions(txns));
+      }catch(e){ console.error(e); showNotification('โหลดข้อมูลไม่สำเร็จ', String(e), 'error');}
+    }
+
+    // ===== Init
+    document.addEventListener('DOMContentLoaded', ()=>{
+      const today=new Date().toISOString().split('T')[0];
+      document.getElementById('incomeDate').value=today;
+      document.getElementById('expenseDate').value=today;
+
+      const now=new Date(); currentYear=now.getFullYear()+543; currentMonth=now.getMonth();
+      document.getElementById('currentMonth').textContent=`${TH_MONTHS[currentMonth]} ${currentYear}`;
+
+      initDonut(); initPriceChart();
+      // seed price history
+      for(let i=9;i>=0;i--){ const t=new Date(now.getTime()-i*60000); const p=btcCurrentPrice+(Math.random()-.5)*800; priceHistory.push({time:t.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}), price:Math.round(Math.max(p,30000))}); }
+      updatePriceChart();
+
+      fetchBTCMeta();     // ดึง ATH + Current จริง
+      refreshDashboard(); // โหลดธุรกรรมจากชีต
+    });
+
+    function filterTransactions(type, el){
+      const rows=document.querySelectorAll('.transaction-row');
+      const buttons=document.querySelectorAll('.filter-btn');
+      buttons.forEach(b=>{ b.classList.remove('bg-blue-500','text-white','active'); b.classList.add('bg-gray-200','text-gray-700'); });
+      if(el){ el.classList.remove('bg-gray-200','text-gray-700'); el.classList.add('bg-blue-500','text-white','active'); }
+      rows.forEach(r=>{
+        if(type==='all') r.style.display='';
+        else if(type==='รายรับ') r.style.display = (r.dataset.type==='รายรับ')?'':'none';
+        else r.style.display = (r.dataset.type!=='รายรับ')?'':'none';
+      });
+    }
+  </script>
+</body>
+</html>
